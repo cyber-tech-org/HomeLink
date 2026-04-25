@@ -61,6 +61,17 @@ $ yarn run test:cov
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
+### Deploying this backend on Vercel
+
+1. Import `homelink-backend` as a Vercel project.
+2. Set the project root directory to `homelink-backend`.
+3. Add environment variables from `.env.example` in Vercel Project Settings.
+4. For production, update callback URLs to your deployed domain:
+   - `GOOGLE_CALLBACK_URL=https://<your-backend-domain>/auth/google/callback`
+   - `FACEBOOK_CALLBACK_URL=https://<your-backend-domain>/auth/facebook/callback`
+5. Set `CORS_ORIGIN` to your frontend domain (or comma-separated domains).
+6. Deploy and share the generated Vercel URL with the frontend app.
+
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
 ```bash
