@@ -67,10 +67,231 @@ When you're ready to deploy your NestJS application to production, there are som
 2. Set the project root directory to `homelink-backend`.
 3. Add environment variables from `.env.example` in Vercel Project Settings.
 4. For production, update callback URLs to your deployed domain:
-   - `GOOGLE_CALLBACK_URL=https://<your-backend-domain>/auth/google/callback`
-   - `FACEBOOK_CALLBACK_URL=https://<your-backend-domain>/auth/facebook/callback`
+   - `GOOGLE_CALLBACK_URL=https://backendhomelink.vercel.app//auth/google/callback`
+   - `FACEBOOK_CALLBACK_URL=https://backendhomelink.vercel.app//auth/facebook/callback`
 5. Set `CORS_ORIGIN` to your frontend domain (or comma-separated domains).
 6. Deploy and share the generated Vercel URL with the frontend app.
+
+## Frontend Auth Integration (Phone + Password only)
+
+Base URL examples:
+
+- Local: `http://localhost:3000`
+- Vercel: `https://backendhomelink.vercel.app/`
+
+All auth endpoints are under: `{{BASE_URL}}/auth`
+
+### Payload rules
+
+- `phoneNumber` must be Nigerian E.164 format: `+234` + 10 digits (example: `+2348012345678`)
+- `password` minimum length: 8
+- `confirmPassword` must exactly match `password`
+- OTP code is exactly 6 digits
+
+### 1) Direct register (no OTP)
+
+`POST /auth/register`
+
+Request:
+
+```json
+{
+  "phoneNumber": "+2348012345678",
+  "password": "secret123",
+  "confirmPassword": "secret123"
+}
+```
+
+Success response:
+
+```json
+{
+  "access_token": "<jwt>",
+  "user": {
+    "id": "<user-id>",
+    "phoneNumber": "+2348012345678",
+    "displayName": null
+  }
+}
+```
+
+Common errors:
+
+- `409` -> `Phone number already registered`
+- `400` -> validation errors (invalid phone, weak password, password mismatch)
+
+### 2) Login
+
+`POST /auth/login`
+
+Request:
+
+```json
+{
+  "phoneNumber": "+2348012345678",
+  "password": "secret123"
+}
+```
+
+Success response:
+
+```json
+{
+  "access_token": "<jwt>",
+  "user": {
+    "id": "<user-id>",
+    "phoneNumber": "+2348012345678",
+    "displayName": null
+  }
+}
+```
+
+Common errors:
+
+- `401` -> `Incorrect phone/password!`
+- `400` -> validation errors
+
+### 3) OTP signup flow (recommended production flow)
+
+Step A: request OTP  
+`POST /auth/signup/request-otp`
+
+```json
+{
+  "phoneNumber": "+2348012345678"
+}
+```
+
+Response:
+
+```json
+{
+  "message": "OTP sent"
+}
+```
+
+Step B: verify OTP  
+`POST /auth/signup/verify-otp`
+
+```json
+{
+  "phoneNumber": "+2348012345678",
+  "code": "123456"
+}
+```
+
+Response:
+
+```json
+{
+  "setupToken": "<jwt>"
+}
+```
+
+Step C: complete signup  
+`POST /auth/signup/complete`
+
+```json
+{
+  "setupToken": "<jwt>",
+  "password": "secret123",
+  "confirmPassword": "secret123"
+}
+```
+
+Response:
+
+```json
+{
+  "access_token": "<jwt>",
+  "user": {
+    "id": "<user-id>",
+    "phoneNumber": "+2348012345678",
+    "displayName": null
+  }
+}
+```
+
+Common errors in OTP signup flow:
+
+- `409` -> phone already registered
+- `400` -> `Invalid OTP`
+- `400` -> `Invalid or expired setup token`
+
+### 4) Password reset flow
+
+Step A: request reset OTP  
+`POST /auth/reset-password/request`  
+(`POST /auth/forgot-password` is also available and does the same thing.)
+
+```json
+{
+  "phoneNumber": "+2348012345678"
+}
+```
+
+Response:
+
+```json
+{
+  "message": "OTP sent"
+}
+```
+
+Step B: verify reset OTP  
+`POST /auth/reset-password/verify`
+
+```json
+{
+  "phoneNumber": "+2348012345678",
+  "code": "123456"
+}
+```
+
+Response:
+
+```json
+{
+  "resetToken": "<jwt>"
+}
+```
+
+Step C: complete reset  
+`POST /auth/reset-password/complete`
+
+```json
+{
+  "resetToken": "<jwt>",
+  "password": "newsecret123",
+  "confirmPassword": "newsecret123"
+}
+```
+
+Response:
+
+```json
+{
+  "access_token": "<jwt>",
+  "user": {
+    "id": "<user-id>",
+    "phoneNumber": "+2348012345678",
+    "displayName": null
+  }
+}
+```
+
+Common reset errors:
+
+- `404` -> `Phone not registered`
+- `400` -> `Invalid OTP`
+- `400` -> `Invalid or expired reset token`
+
+### Frontend storage and auth header
+
+- Store `access_token` securely on the client (or in app auth state).
+- Send token on protected routes with:
+  - `Authorization: Bearer <access_token>`
+- On `401`, clear auth state and redirect user to login.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
 
